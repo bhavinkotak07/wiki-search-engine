@@ -49,19 +49,40 @@ public class Stopwords {
 
 		for (String word : strings) {
 			if (Stopwords.isStopWord(word) == false && word.length() > 2) {
-				String stem = Stemmer.getStem(word);
-				res.add(Stemmer.getStem(stem));
+				word = word.trim();
+				if(allSame(word) || word.charAt(0) == '0')
+				{
+					//System.out.println(word);
+				}
+				else	
+					res.add(Stemmer.getStem(word));
 			}
 
 		}
 		return res;
+	}
+	public static boolean allSame(String word) {
+		for(char c : word.toCharArray())
+		{
+			if(c != word.charAt(0))
+				return false;
+			
+		}
+			
+		return true;
 	}
 
 	public static ArrayList<String> removeStopwords(ArrayList<String> strings) {
 		ArrayList<String> res = new ArrayList<String>();
 		for (String word : strings) {
 			if (Stopwords.isStopWord(word) == false && word.length() > 2) {
-				res.add(Stemmer.getStem(word));
+				word = word.trim();
+				if(allSame(word) || word.charAt(0) == '0')
+				{
+					//System.out.println(word);
+				}
+				else	
+					res.add(Stemmer.getStem(word));
 			}
 
 		}

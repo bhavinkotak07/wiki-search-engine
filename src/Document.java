@@ -1,24 +1,37 @@
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.math.BigInteger; 
 
-public class Document {
+public class Document implements Runnable {
 	public String text;
 	public String title;
-	public String id;
+	public long id;
 	public String category = "";
 	public String infobox = "";
 	public String references = "";
-
-	public Document(int id) {
-		this.id = String.valueOf(id);
-		// System.out.println(id);
+	public static long counter = 1;
+	public ArrayList<String> bodyWordsList;
+	public ArrayList<String> categoriesList;
+	public ArrayList<String> refList;
+	public ArrayList<String> titleList;
+	public ArrayList<String> infoboxList;
+	public Document() {
+		id = counter;
+		counter += 1;
 	}
-
+	
 	public String getText() {
 		return text;
 	}
 
+	public void run() {
+		this.extractFields();
+		this.tokenize();
+		//System.out.println("Tokenization done" + id);
+		//indexer.index(this);
+		
+	}
 	public String processExternalLinks(String str) {
 		Pattern externalLinksPattern = Pattern.compile("== ?external links ?==(.*?)\n\n", Pattern.DOTALL);
 		Pattern UrlFtpFile = Pattern
@@ -34,7 +47,7 @@ public class Document {
 			while (match.find()) {
 				res = UrlFtpFile.matcher(match.group(3).toString()).replaceAll(" ");
 				// tokenize(res.replaceAll("[^a-z]", " ").trim().replaceAll("\\s+"," "), 'L');
-				System.out.println("Link:" + res);
+				//System.out.println("Link:" + res);
 			}
 		}
 		str = externalLinksMatcher.replaceAll(" ");
@@ -72,20 +85,38 @@ public class Document {
 	public void findReferences() {
 		String regex = "(;notes)|(\\{\\{reflist.*?\\}\\})";
 		ArrayList<String> res = findAll(regex, text);
-		printList(res);
+		//printList(res);
 	}
 
 	public void findCategories() {
 		String regex = "\\[\\[category.*?\\]\\]";
 		// System.out.println(replaceAll(regex, "[[category:this is dog]] blah blah"));
 		ArrayList<String> res = findAll(regex, text);
+		categoriesList = new ArrayList<String>();
+		//printList(res);
+		for(int i = 0; i < res.size(); i++) {
+			try {
+				if(res.get(i).startsWith("[[category:") ) {
+					String temp = res.get(i).substring(11, res.get(i).length() - 2).replaceAll("[^a-z0-9]", " ").trim().replaceAll("\\s+", " ");
+					for(String s: temp.split(" ")) {
+						categoriesList.add(s);
+					}
+				}
+					
+			}
+			catch(Exception ex) {
+				System.out.println("Exception:" + ex.getMessage());
+			}
+		}
+		//categoriesList = res;
+		//printList(res);
 
 	}
 
 	public void findURLS() {
 		String regex = "https?:\\/\\/(?:www\\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\\.[^\\s|^\\|]{2,}";
 		ArrayList<String> res = findAll(regex, text);
-		printList(res);
+		//printList(res);
 
 	}
 
@@ -119,7 +150,7 @@ public class Document {
 	}
 
 	public String extractInfoBox(String content) {
-		final String infoBoxPatterm = "{{Infobox";
+		final String infoBoxPatterm = "{{infobox";
 		int startPos = content.indexOf(infoBoxPatterm);
 		if (startPos < 0)
 			return "";
@@ -148,11 +179,13 @@ public class Document {
 		infoBoxText = infoBoxText.replaceAll("&lt;", "<");
 		infoBoxText = infoBoxText.replaceAll("<ref.*?>.*?</ref>", " ");
 		infoBoxText = infoBoxText.replaceAll("</?.*?>", " ");
+		
 		infobox = infoBoxText;
 		if (startPos - 1 < 0)
 			content = content.substring(endPos);
 		else
 			content = content.substring(0, startPos - 1) + content.substring(endPos);
+		
 		return content;
 
 	}
@@ -171,22 +204,22 @@ public class Document {
 
 			} 
 		}
-		;
+		
 	}
 	public void extractFields() {
 
 		this.findURLS();
-		infobox = this.extractInfoBox(text);
+		this.extractInfoBox(text);
 		text = this.processExternalLinks(text);
 		this.findCategories();
 		this.findReferences();
 		
 	}
+	
 
 	public void setText(String text) {
 		this.text = new String(text.toLowerCase());
-		this.extractFields();
-		this.tokenize();
+		
 
 	}
 
@@ -198,13 +231,11 @@ public class Document {
 		this.title = new String(title);
 	}
 
-	public String getId() {
+	public long getId() {
 		return id;
 	}
 
-	public void setId(String id) {
-		this.id = id;
-	}
+	
 
 	public String getCategory() {
 		return category;
@@ -214,21 +245,33 @@ public class Document {
 		text = text.replaceAll("[^a-z0-9]", " ").trim().replaceAll("\\s+", " ");
 		text = text.replaceAll("&amp;", "");
 		text = text.replaceAll("&quot;", "");
-
-
+		
+		infobox = infobox.replaceAll("[^a-z0-9]", " ").trim().replaceAll("\\s+", " ");
+		infobox = infobox.replaceAll("&amp;", "");
+		infobox = infobox.replaceAll("&quot;", "");
+		
+		String tt = title.toLowerCase().replaceAll("[^a-z0-9]", " ").trim().replaceAll("\\s+", " ");
+		
+		tt = tt.replaceAll("&amp;", "");
+		tt = tt.replaceAll("&quot;", "");
 		//text = text.replaceAll("", "");
-		ArrayList<String> words = Stopwords.removeStopwords(text.split(" "));
+		this.bodyWordsList = Stopwords.removeStopwords(text.split(" "));
 		//printList(words);
+		
+		this.infoboxList = Stopwords.removeStopwords(infobox.split(" "));
+		this.titleList = Stopwords.removeStopwords(tt.split(" "));
+		this.categoriesList = Stopwords.removeStopwords(categoriesList);
+
 
 		
 	}
 
 	public void showDocument() {
-		System.out.println("Doc");
-		System.out.println("Title:" + this.getTitle());
+		System.out.println("Doc:" + this.getId());
+		//System.out.println("Title:" + this.getTitle());
 		// System.out.println("Category: " + category);
 		// System.out.println("References:" + references);
-		// System.out.println("Infobox:" + infobox);
+		//System.out.println("Infobox:" + infobox);
 		// System.out.println("Text:" + this.getText());
 	}
 
